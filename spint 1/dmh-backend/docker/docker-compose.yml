@@ -1,0 +1,88 @@
+version: '3.8'
+
+#
+# Arquitectura local para el microservicio "Digital Money House".
+#
+# Este archivo define dos servicios:
+#   * mysqldb   – instancia de MySQL 8 para almacenar las tablas de negocio.
+#   * app       – microservicio basado en Spring Boot que accede a la base de datos.
+#
+# El microservicio se construye desde un Dockerfile presente en la raíz del
+# proyecto. Se expone el puerto 8080 en la máquina host para permitir
+# solicitudes HTTP desde un navegador o herramientas como Postman.  La base
+# de datos se expone en el puerto 3306 de la máquina host, lo que facilita
+# depurar la base de datos mediante clientes como MySQL Workbench.  Las
+# credenciales y la URL JDBC se inyectan mediante variables de entorno,
+# siguiendo las recomendaciones de la documentación oficial de Docker y MySQL.
+# Las directivas `depends_on` y `healthcheck` aseguran que la base de datos esté
+# lista antes de arrancar el microservicio【161007132580821†L828-L837】.
+
+services:
+  mysqldb:
+    image: mysql:8.0
+    container_name: digital-money-mysql
+    restart: unless-stopped
+    environment:
+      # Contraseña del usuario root.  La documentación del contenedor oficial
+      # señala que `MYSQL_ROOT_PASSWORD` define la contraseña de la cuenta
+      # administrativa del servidor【335825580029878†L104-L117】.
+      MYSQL_ROOT_PASSWORD: changeme_root
+      # Nombre de la base de datos que se creará en el primer arranque
+      MYSQL_DATABASE: digital_money_db
+      # Credenciales para un usuario de aplicación
+      MYSQL_USER: digital_user
+      MYSQL_PASSWORD: digital_pass
+    ports:
+      # Mapea el puerto interno 3306 de MySQL al puerto 3306 del host.  Este
+      # mapeo hace posible acceder a la base de datos desde la máquina local
+      # utilizando herramientas gráficas o líneas de comando【335825580029878†L104-L120】.
+      - "3306:3306"
+    volumes:
+      # Volumen persistente para los ficheros de datos de MySQL.
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      # Comprueba que el servidor responda antes de marcar el contenedor
+      # como «healthy».  mysqladmin ping devuelve un código 0 cuando
+      # MySQL está listo.
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pchangeme_root"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    container_name: digital-money-app
+    # Build a partir del Dockerfile que acompaña al microservicio.  Se asume
+    # que el Dockerfile se encuentra en el directorio raíz del proyecto y
+    # empaqueta un jar de Spring Boot.
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: on-failure
+    depends_on:
+      mysqldb:
+        condition: service_healthy
+    environment:
+      # Parámetros de conexión a la base de datos. Spring Boot expone cada
+      # propiedad del `application.properties` como variable de entorno con el
+      # prefijo SPRING_, lo que permite inyectar la URL, usuario y contraseña.
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysqldb:3306/digital_money_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: digital_user
+      SPRING_DATASOURCE_PASSWORD: digital_pass
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.MySQL8Dialect
+    ports:
+      # Expone el puerto 8080 de la aplicación dentro del contenedor hacia el
+      # puerto 8080 de la máquina host para recibir tráfico HTTP【24097567464803†L139-L177】.
+      - "8080:8080"
+    # Opcional: salud de la aplicación Spring Boot.  Requiere el módulo
+    # actuator y un punto de salud `/actuator/health`.  Eliminado si no se
+    # utiliza.
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 5
+
+volumes:
+  mysql_data:
+    driver: local
