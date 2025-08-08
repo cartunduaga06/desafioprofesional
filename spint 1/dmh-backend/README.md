@@ -15,7 +15,7 @@ Este proyecto es una API REST construida con Java + Spring Boot como parte del d
 
 1. Clonar el repositorio:
 ```bash
-git clone https://github.com/tuusuario/dmh-backend.git
+git clone https://github.com/cartunduaga06/desafioprofesional.git
 cd dmh-backend
 ```
 
