@@ -1,0 +1,145 @@
+Plan de Pruebas – Sprint 1 – Proyecto Digital Money House
+1 Introducción y alcance
+
+El presente plan establece la estrategia y lineamientos de pruebas para el Sprint 1 del proyecto Digital Money House. Este proyecto corresponde a una billetera virtual que permite a las personas registrarse, autenticarse y administrar su cuenta. Durante el primer sprint se construyeron los cimientos de la capa de autenticación (registro, inicio y cierre de sesión) y la navegación básica.
+
+El objetivo de las pruebas es validar que los nuevos endpoints expuestos por el backend cumplen con los requisitos de negocio y las expectativas de calidad. También se busca descubrir defectos en etapas tempranas para permitir su corrección antes de la publicación. El plan se centra exclusivamente en los endpoints de Registro de usuario, Login y Logout y en la interacción de éstos con la persistencia de usuarios y la generación de tokens.
+
+2 Objetivos de pruebas
+
+Verificar la funcionalidad básica (smoke test) de los endpoints: asegurarse de que el servicio backend esté levantado, que las rutas respondan y que las operaciones principales se puedan ejecutar de extremo a extremo.
+
+Garantizar la calidad funcional: comprobar que las reglas de negocio se respetan, incluyendo validaciones de campos obligatorios, formatos correctos, manejo de errores y seguridad básica (p. ej., almacenamiento seguro de contraseñas, generación y expiración de tokens).
+
+Ejecutar pruebas de regresión sobre cambios: identificar si las correcciones de defectos o nuevos desarrollos rompen funcionalidad existente.
+
+Recoger defectos y documentarlos: reportar de manera formal cada inconsistencia encontrada en la ejecución de los casos de prueba para que el equipo de desarrollo pueda reproducirlos y corregirlos.
+
+3 Alcance de Sprint 1
+
+Las funcionalidades cubiertas por el Sprint 1 y que serán objeto de las pruebas son:
+
+Registro de usuarios (POST /api/users): crea una cuenta nueva a partir de nombre, apellido, DNI, correo electrónico, contraseña y teléfono. Debe validar unicidad de correo y DNI, así como el formato de los campos.
+
+Inicio de sesión (POST /api/login): autentica a un usuario mediante email y contraseña. La respuesta debe contener un token de acceso y código de estado 200 en caso de éxito. Deben manejarse errores de credenciales inválidas y bloqueos temporales por intentos fallidos repetidos.
+
+Obtención de datos de cuenta (GET /api/account): devuelve datos del usuario autenticado (id, user_id, cvu, alias, saldo disponible) a partir de un token válido en la cabecera Authorization.
+
+Cierre de sesión (POST /api/logout): invalida el token de sesión del usuario y elimina la cookie o cabecera asociada. El endpoint no requiere cuerpo, únicamente un token válido, y debe regresar una respuesta exitosa.
+
+No forman parte de este sprint funcionalidades de manejo de perfil, gestión de medios de pago ni movimiento de fondos; éstas se cubrirán en sprints posteriores.
+
+4 Estrategia y niveles de pruebas
+4.1 Pruebas funcionales
+
+Se ejecutarán pruebas funcionales manuales contra los endpoints desplegados en el entorno de desarrollo o staging. Las pruebas se diseñarán utilizando la técnica de caja negra (black box), enfocándose en las entradas y salidas observables sin necesidad de conocer la implementación interna.
+
+4.2 Smoke test
+
+Para cada despliegue se ejecutará una selección de casos críticos que verifican que los servicios básicos están operativos. Un smoke test cubre escenarios felices como el registro exitoso de un usuario nuevo, el inicio de sesión con credenciales válidas y el cierre de sesión.
+
+4.3 Pruebas de regresión
+
+Antes de cada entrega, los casos de regresión se ejecutarán para confirmar que las funcionalidades existentes no se han visto afectadas por cambios recientes. Los casos de regresión incluyen validaciones negativas (campos requeridos, formatos erróneos, credenciales incorrectas), uso de tokens expirados o inválidos, y verificación de cabeceras.
+
+4.4 Pruebas exploratorias
+
+Además de las pruebas planificadas, se realizarán sesiones de prueba exploratoria para identificar comportamientos no previstos. Estas sesiones se documentarán mediante notas de exploración en las que se describen los tours realizados, hipótesis evaluadas y defectos encontrados.
+
+5 Diseño de casos de prueba
+
+Los casos de prueba se documentarán en una hoja de cálculo con la siguiente estructura:
+
+Campo	Descripción
+ID	Identificador único del caso (ej. TC-REG-001).
+Endpoint / Método	Ruta y verbo HTTP sobre el cual se ejecuta la prueba.
+Título	Breve descripción de la funcionalidad a validar.
+Precondiciones	Estado inicial necesario (por ejemplo, usuario existente, ausencia de cuenta previa).
+Datos de entrada	Valores específicos que se enviarán en la petición (payload o parámetros).
+Pasos	Instrucciones detalladas para ejecutar la prueba, incluyendo cómo construir la solicitud (cabeceras, método, cuerpo) y cómo verificar la respuesta.
+Resultado esperado	Resultado observable que se espera obtener: código de estado HTTP, contenido del cuerpo (campos devueltos, mensajes de error), creación o modificación de registros, efectos secundarios, etc.
+Resultado obtenido	Resultado real durante la ejecución. Debe consignarse “Pendiente” si la prueba aún no se ejecuta o “Pasó/Falló” con comentarios.
+Clasificación	Indica si el caso pertenece a la suite de smoke o a la de regresión. Algunos casos pueden pertenecer a ambas suites.
+Notas	Observaciones o información adicional, como defectos observados o referencias a tickets creados.
+5.1 Buenas prácticas en la redacción de casos
+
+Claridad y precisión: el título y los pasos deben describir exactamente lo que se va a probar. Evitar ambigüedades.
+
+Reproducibilidad: cualquier miembro del equipo debe poder ejecutar el caso y obtener el mismo resultado. Incluir datos de ejemplo y entorno de ejecución.
+
+Atomicidad: cada caso debe validar un comportamiento específico. Si se necesitan validar múltiples reglas, se crearán casos independientes.
+
+Rastreabilidad: vincular cada caso de prueba con el requisito o historia de usuario correspondiente para facilitar el seguimiento.
+
+6 Reporte y gestión de defectos
+
+Los defectos detectados durante la ejecución deberán registrarse en la herramienta de seguimiento de bugs adoptada por el equipo (por ejemplo, Jira, GitLab Issues o GitHub Issues). Cada reporte debe contener como mínimo:
+
+ID del defecto: se genera según el formato definido (ej. DEF-001).
+
+Título: resumen conciso del problema.
+
+Descripción: explicación detallada del comportamiento observado frente al esperado, incluyendo capturas de pantalla, cuerpo de la solicitud y respuesta, logs relevantes y condiciones en las que se presentó.
+
+Pasos para reproducir: enumeración detallada para replicar el error.
+
+Severidad: nivel de impacto en la funcionalidad (Crítica, Alta, Media, Baja). La severidad se asigna según el riesgo para la operación del usuario o la seguridad.
+
+Prioridad: indica el orden en que debería abordarse la corrección (Alta, Media, Baja), valorado en conjunto con el Product Owner.
+
+Entorno de ocurrencia: especifica el ambiente (dev, staging, producción), la fecha y la versión del backend.
+
+Todos los defectos deben adjuntarse al caso de prueba que los originó y actualizar el estado de dicho caso a “Falló”. Una vez corregido el error, se reabrirá la prueba como parte de la regresión.
+
+7 Criterios de inclusión en suites
+7.1 Smoke test
+
+Se seleccionarán los casos de prueba que cumplan las siguientes características:
+
+Prueban la operatividad básica de los servicios (up & running) y el camino feliz.
+
+Son de rápida ejecución y cobertura amplia. La suite no debe superar los 15 minutos de ejecución manual.
+
+No requieren datos complejos ni configuraciones particulares.
+
+Para este sprint, forman parte del smoke test las pruebas de:
+
+Creación de usuario con datos válidos.
+
+Inicio de sesión con credenciales correctas y recepción de token.
+
+Obtención de datos de cuenta mediante token.
+
+Cierre de sesión con token válido.
+
+7.2 Regresión
+
+Incluye todos los casos que validan reglas de negocio, flujos alternativos y condiciones de error. Se ejecutan cada vez que se corrige un defecto o se despliega una nueva versión del backend. Para Sprint 1, los casos de regresión abarcan, entre otros:
+
+Validación de campos obligatorios y formatos en el registro (email, DNI, contraseña).
+
+Manejo de usuarios duplicados (email ya registrado, DNI ya registrado).
+
+Intentos de login con contraseña incorrecta o email inexistente.
+
+Solicitudes sin token o con token expirado en la obtención de cuenta.
+
+Intento de cierre de sesión sin token o con token no válido.
+
+Pruebas de idempotencia y seguridad (cabeceras inapropiadas, verbos HTTP incorrectos).
+
+8 Gestión y comunicación
+
+Los resultados de las pruebas se actualizarán en la hoja de cálculo compartida al finalizar cada sesión de prueba. Las notas de exploración se compartirán en el canal del equipo para discusión. Se realizará una daily breve para notificar bloqueos o defectos críticos.
+
+9 Riesgos y consideraciones
+
+La disponibilidad del entorno de backend es un factor crítico; se requiere estabilidad para ejecutar las pruebas manuales.
+
+Es importante trabajar con datos de prueba representativos, evitando usar datos reales de usuarios.
+
+Las validaciones de seguridad profunda (hashing de contraseñas, protección CSRF) se abordarán en fases posteriores con pruebas de penetración.
+
+Si se producen cambios en los contratos de las APIs, se deberá actualizar la documentación y los casos de prueba asociados.
+
+Este plan será revisado y refinado en colaboración con el equipo de desarrollo y el Product Owner al inicio de cada sprint. Su objetivo es proporcionar una guía estructurada y adaptable para asegurar la calidad del producto durante el desarrollo iterativo.

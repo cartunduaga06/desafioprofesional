@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: dmh-mysql
+    environment:
+      MYSQL_DATABASE: digitalmoneyhouse
+      MYSQL_USER: dmhuser
+      MYSQL_PASSWORD: dmhpass
+      MYSQL_ROOT_PASSWORD: rootpass
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+  app:
+    build: ./dmh-backend
+    container_name: dmh-backend
+    depends_on:
+      - db
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://dmh-mysql:3306/digitalmoneyhouse?useSSL=false&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: dmhuser
+      SPRING_DATASOURCE_PASSWORD: dmhpass
+      JWT_SECRET: ${JWT_SECRET:-UmFuZG9tU2VjcmV0S2V5Rm9yRGlnaXRhbE1vbmV5SG91c2U=}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+volumes:
+  db_data:
