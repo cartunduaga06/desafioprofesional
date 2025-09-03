@@ -1,4 +1,4 @@
-# Digital Money House – Backend (Sprint 1)
+# Digital Money House – Backend (Sprint 2)
 
 Este repositorio contiene la implementación del backend para el proyecto **Digital Money House**, desarrollado con **Java 17** y **Spring Boot 3.x**. El objetivo del Sprint 1 es ofrecer un producto mínimo viable (MVP) que permita registrar usuarios, autenticar y cerrar sesión mediante JWT, cumpliendo con los criterios de aceptación definidos.
 
