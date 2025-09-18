@@ -1,0 +1,55 @@
+Notas de Pruebas Exploratorias – Sprint 4 – Proyecto Digital Money House
+
+Estas notas documentan las sesiones de pruebas exploratorias realizadas durante el Sprint 4, enfocadas en la nueva funcionalidad de transferencias entre cuentas. El objetivo fue descubrir comportamientos no previstos, evaluar la persistencia de destinatarios y verificar la integridad del saldo después de múltiples operaciones.
+
+Sesión 1 – Transferencias múltiples y destinatarios frecuentes
+
+Objetivo: probar la ejecución de varias transferencias consecutivas desde una misma cuenta y verificar que los destinatarios se almacenan y se recuperan correctamente mediante el endpoint GET /accounts/{id}/transferences.
+
+Recorrido:
+
+Con un usuario autenticado y saldo suficiente, realicé tres transferencias a cuentas diferentes (toAccountId=2, toAccountId=3 y toAccountId=4) con montos pequeños. Las tres solicitudes devolvieron HTTP 200 y se reflejó la disminución del saldo tras cada transacción.
+
+Consulté /accounts/1/transferences para revisar los destinatarios recientes. La respuesta incluyó los tres destinatarios en orden cronológico inverso. Se observó que si se repite una transferencia a un destinatario existente, éste se vuelve a posicionar en el primer lugar de la lista (comportamiento deseado).
+
+Realicé una cuarta transferencia a un nuevo destinatario y verifiqué que la lista se actualizó correctamente, desplazando al más antiguo. Sin embargo, la API no expone un parámetro limit para acotar el número de destinatarios devueltos; la cantidad parece estar fija en cinco elementos. Se sugiere documentar o parametrizar este límite.
+
+Envié solicitudes de consulta de destinatarios sin token y con token inválido; en ambos casos el backend respondió con 403 (permisos insuficientes), lo cual es adecuado y consistente.
+
+Hallazgos:
+
+El flujo feliz de transferencias y consulta de destinatarios funciona correctamente.
+
+Falta documentación del parámetro de límite de destinatarios o la posibilidad de personalizarlo.
+
+Se confirma que el endpoint protege la consulta de destinatarios frente a cuentas ajenas (403).
+
+Sesión 2 – Validaciones de transferencias y fondos insuficientes
+
+Objetivo: evaluar los controles de seguridad y las respuestas de error en el endpoint POST /accounts/{id}/transferences.
+
+Recorrido:
+
+Intenté transferir un monto que excedía el saldo disponible. La API respondió con 410 Gone indicando fondos insuficientes y el saldo permaneció sin cambios. Correcto.
+
+Probé enviar un cuerpo con amount=0 y otro con amount=-10. En ambos casos el servicio respondió con 400 Bad Request informando que el monto debe ser positivo, de acuerdo con la validación de datos.
+
+Realicé una transferencia a partir de una cuenta que no me pertenecía (cuenta 2) usando el token del usuario de la cuenta 1. La respuesta fue 403 Forbidden, pero el mensaje era genérico ("Permisos insuficientes"). Sería útil incluir información de que la cuenta no corresponde al usuario autenticado.
+
+Probé transferir a una toAccountId inexistente (por ejemplo 9999). El servicio devolvió 404 Not Found con un mensaje indicando que la cuenta destino no existe; se validó que el saldo de la cuenta de origen no se modificó.
+
+Envié un cuerpo sin description. El campo es opcional y la transferencia se registró correctamente.
+
+Hallazgos:
+
+Los montos negativos o nulos se rechazan adecuadamente.
+
+La respuesta 410 se utiliza correctamente cuando el saldo no alcanza.
+
+La respuesta 403 para transferencias desde cuentas ajenas es genérica; podría mejorarse el mensaje para ayudar a los desarrolladores a diagnosticar permisos.
+
+El servicio maneja correctamente la inexistencia de la cuenta destino con un código 404.
+
+Conclusiones
+
+Las sesiones exploratorias confirmaron que la funcionalidad de transferencias cumple con los flujos principales y las validaciones más críticas. Se sugieren mejoras en la parametrización del número de destinatarios devueltos y en la claridad de algunos mensajes de error. Estos hallazgos se incorporarán a los casos de regresión y se reportarán como tickets de mejora para los próximos sprints.

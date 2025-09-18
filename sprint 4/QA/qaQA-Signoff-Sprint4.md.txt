@@ -1,0 +1,35 @@
+QA Sign‑off – Sprint 4 – Digital Money House
+
+Este informe resume las actividades de calidad realizadas durante el Sprint 4, la implementación y validación de las transferencias de dinero en Digital Money House. Se incluyen métricas de ejecución de pruebas, defectos detectados y consideraciones finales para el cierre del sprint.
+
+1 Resumen de actividades
+
+Actualización del plan de pruebas: el documento qa/plan-de-pruebas.md se amplió para incluir las nuevas funcionalidades de transferencia (listar destinatarios y realizar transferencias). Se añadieron criterios de inclusión en las suites de smoke y regresión.
+
+Casos de prueba manuales: se agregaron seis casos a qa/casos-de-prueba.xlsx (del TC-TRF-001 al TC-TRF-006) para cubrir escenarios felices y negativos de los endpoints /accounts/{id}/transferences (GET y POST). Se mantuvieron los casos de sprints anteriores.
+
+Pruebas exploratorias: se llevaron a cabo dos sesiones documentadas en qa/notas-exploratorias-sprint4.md, centradas en flujos de transferencias múltiples, almacenamiento de destinatarios y validaciones de monto/permisos.
+
+Pruebas automatizadas: se extendió el framework RestAssured para incorporar pruebas de smoke del Sprint 4. El repositorio automated-tests incluye ahora la clase TransferenceApiTest con cinco pruebas automatizadas (transacción exitosa, cuenta inexistente, saldo insuficiente, destinatarios, y transferencia desde cuenta ajena). Todas las pruebas se ejecutan como parte del pipeline local.
+
+Revisión de evidencias: se validó que las transferencias actualizan el saldo correctamente y que los destinatarios recientes se devuelven en orden. Se verificó el manejo de errores para cuentas inexistentes, fondos insuficientes y cuentas ajenas.
+
+2 Métricas de ejecución
+Tipo de prueba	Casos ejecutados	Pasados	Fallidos	Pendientes	Observaciones
+Smoke (manual)	2	2	0	0	Caminos felices de listar destinatarios y transferir fondos se completan sin errores.
+Regresión (manual)	4	4	0	0	Se validaron respuestas 400, 403 y 410 en escenarios negativos.
+Exploratorias	2 sesiones	–	–	–	Se detectaron oportunidades de mejora (p. ej., parametrización del límite de destinatarios).
+Automatizadas (RestAssured)	5	5	0	0	Las pruebas se ejecutan con éxito y reproducen los casos de smoke.
+3 Defectos e incidencias
+
+Durante el Sprint 4 no se reportaron defectos críticos. Las validaciones y flujos se comportaron conforme a lo esperado. Se registraron dos mejoras para próximos sprints:
+
+ID	Descripción	Severidad	Estado	Nota
+MEJ‑015	El endpoint de listar destinatarios no permite especificar un parámetro limit y devuelve siempre un número fijo de destinatarios.	Baja	Registrado	Sugiere añadir parámetro opcional para paginar o limitar.
+MEJ‑016	El mensaje de error al intentar transferir desde una cuenta ajena es genérico (“Permisos insuficientes”).	Baja	Registrado	Se propone incluir una explicación que indique que la cuenta no corresponde al usuario autenticado.
+
+No se detectaron fallos funcionales que impidan la entrega del sprint; los hallazgos anteriores son mejoras de usabilidad y documentación.
+
+4 Conclusiones
+
+El equipo de QA verificó las nuevas funcionalidades de transferencias de dinero y concluyó que cumplen con los requisitos establecidos. Las suites de smoke y regresión alcanzaron un 100 % de pruebas pasadas, sin fallos críticos. Se recomienda considerar las mejoras identificadas de cara a la evolución del producto. Con base en estos resultados, se otorga el sign‑off de calidad para el Sprint 4.

@@ -1,0 +1,88 @@
+version: "3.9"
+
+#
+# Arquitectura local para el microservicio "Digital Money House" (Sprint 4).
+#
+# Este archivo define dos servicios:
+#   * db      – instancia de MySQL 8.0 para almacenar las tablas de negocio.
+#   * backend – microservicio Spring Boot que accede a la base de datos.
+#
+# El microservicio se construye a partir de un Dockerfile multi‑etapa dentro de
+# la carpeta `backend`.  La imagen expone el puerto interno 8080; se mapea
+# al puerto definido en la variable de entorno `APP_PORT` para permitir
+# solicitudes HTTP desde el host.  La base de datos se expone en el puerto
+# definido por `MYSQL_PORT`, lo que facilita depurar la base de datos mediante
+# clientes como MySQL Workbench.  Las credenciales y la URL JDBC se inyectan
+# mediante variables de entorno, siguiendo las recomendaciones de la
+# documentación oficial de Docker y MySQL【335825580029878†L104-L117】.  Las
+# directivas `depends_on` y `healthcheck` aseguran que la base de datos esté
+# lista antes de arrancar el microservicio【161007132580821†L828-L837】.
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: dmh-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      TZ: ${TZ}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: dmh-backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      TZ: ${TZ}
+
+      # JDBC via env en application.properties / yml
+      MYSQL_HOST: ${MYSQL_HOST}
+      MYSQL_PORT: ${MYSQL_PORT}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS}
+
+      # Variables para integración opcional con AWS S3. Estas variables no
+      # afectan el arranque local a menos que la aplicación utilice S3 para
+      # almacenar imágenes de tarjetas o actividades. Configure valores
+      # válidos en su `.env` si implementa esta funcionalidad.  Si no se
+      # requieren, pueden dejarse vacías o eliminarse.
+      AWS_REGION: ${AWS_REGION}
+      AWS_BUCKET: ${AWS_BUCKET}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    restart: unless-stopped
+
+    # Opcional: healthcheck del backend.  Si la aplicación expone un endpoint
+    # de salud (por ejemplo con Spring Actuator en `/actuator/health`),
+    # se puede activar esta sección para que Docker marque el contenedor
+    # como healthy sólo cuando la API devuelva un código HTTP 200.
+    # healthcheck:
+    #   test: ["CMD", "sh", "-c", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 5
+
+volumes:
+  db_data:

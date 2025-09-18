@@ -1,0 +1,207 @@
+Plan de Pruebas – Sprints 1 y 2 – Proyecto Digital Money House
+1 Introducción y alcance
+
+El presente plan establece la estrategia y lineamientos de pruebas para los Sprints 1 y 2 del proyecto Digital Money House. Este proyecto corresponde a una billetera virtual que permite a las personas registrarse, autenticarse y administrar su cuenta. Durante el primer sprint se construyeron los cimientos de la capa de autenticación (registro, inicio y cierre de sesión) y la navegación básica. En el Sprint 2 se ampliaron las funcionalidades para consultar la información de la cuenta (saldo y últimos movimientos), gestionar el perfil del usuario y administrar las tarjetas asociadas a una cuenta. Este plan evoluciona para abarcar las nuevas rutas y mantener la cobertura de los endpoints anteriores.
+
+El objetivo de las pruebas es validar que los nuevos endpoints expuestos por el backend cumplen con los requisitos de negocio y las expectativas de calidad. También se busca descubrir defectos en etapas tempranas para permitir su corrección antes de la publicación. El plan se centra exclusivamente en los endpoints de Registro de usuario, Login y Logout y en la interacción de éstos con la persistencia de usuarios y la generación de tokens.
+
+2 Objetivos de pruebas
+
+Verificar la funcionalidad básica (smoke test) de los endpoints: asegurarse de que el servicio backend esté levantado, que las rutas respondan y que las operaciones principales se puedan ejecutar de extremo a extremo.
+
+Garantizar la calidad funcional: comprobar que las reglas de negocio se respetan, incluyendo validaciones de campos obligatorios, formatos correctos, manejo de errores y seguridad básica (p. ej., almacenamiento seguro de contraseñas, generación y expiración de tokens).
+
+Ejecutar pruebas de regresión sobre cambios: identificar si las correcciones de defectos o nuevos desarrollos rompen funcionalidad existente.
+
+Recoger defectos y documentarlos: reportar de manera formal cada inconsistencia encontrada en la ejecución de los casos de prueba para que el equipo de desarrollo pueda reproducirlos y corregirlos.
+
+3 Alcance de Sprint 1
+
+Las funcionalidades cubiertas por el Sprint 2 y que serán objeto de las pruebas son:
+
+Registro de usuarios (POST /api/users): crea una cuenta nueva a partir de nombre, apellido, DNI, correo electrónico, contraseña y teléfono. Debe validar unicidad de correo y DNI, así como el formato de los campos.
+
+Inicio de sesión (POST /api/login): autentica a un usuario mediante email y contraseña. La respuesta debe contener un token de acceso y código de estado 200 en caso de éxito. Deben manejarse errores de credenciales inválidas y bloqueos temporales por intentos fallidos repetidos.
+
+Obtención de datos de cuenta (GET /api/account): devuelve datos del usuario autenticado (id, user_id, cvu, alias, saldo disponible) a partir de un token válido en la cabecera Authorization.
+
+Cierre de sesión (POST /api/logout): invalida el token de sesión del usuario y elimina la cookie o cabecera asociada. El endpoint no requiere cuerpo, únicamente un token válido, y debe regresar una respuesta exitosa.
+
+Consultar cuenta (GET /accounts/{accountId}): retorna el CVU, alias y saldo disponible de la cuenta del usuario. Requiere estar autenticado con rol USER y un identificador de cuenta válido; devuelve 404 si la cuenta no existe.
+
+Consultar movimientos (GET /accounts/{accountId}/transactions): recupera las últimas cinco transacciones asociadas a la cuenta. Requiere autenticación y devuelve lista ordenada del historial reciente.
+
+Actualizar alias de la cuenta (PATCH /accounts/{accountId}): permite modificar el alias de la cuenta. Debe validar que el nuevo alias no esté en uso y responder 409 en caso de conflicto.
+
+Consultar perfil de usuario (GET /users/{userId}): proporciona la información del usuario (nombre, apellido, email, DNI y otros datos) según su identificador. Debe validar permisos y retornar 404 si el usuario no existe.
+
+Actualizar perfil de usuario (PATCH /users/{userId}): permite modificar parcialmente los datos del usuario (nombre, email, teléfono, etc.). Debe controlar duplicados de email o DNI y devolver 409 cuando haya conflicto.
+
+Administración de tarjetas (/accounts/{accountId}/cards):
+
+Listar tarjetas (GET): obtiene la lista de tarjetas asociadas a la cuenta.
+
+Obtener tarjeta (GET /{cardId}): obtiene una tarjeta específica de la cuenta.
+
+Crear tarjeta (POST): agrega una nueva tarjeta. Valida que el número no exista y devuelve 409 en caso de duplicado.
+
+Eliminar tarjeta (DELETE /{cardId}): elimina una tarjeta existente. Retorna 404 si la tarjeta no existe.
+
+No forman parte de este sprint funcionalidades de manejo de perfil, gestión de medios de pago ni movimiento de fondos; éstas se cubrirán en sprints posteriores.
+
+3.1 Alcance de Sprint 4 – Transferencias
+
+El Sprint 4 incorpora la funcionalidad de transferencias de dinero entre cuentas. Se añade un nuevo controlador para gestionar las operaciones de envío de fondos y consulta de destinatarios frecuentes. Las funcionalidades a validar son:
+
+Listar últimos destinatarios (GET /accounts/{accountId}/transferences): devuelve la lista de destinatarios de las transferencias más recientes realizadas por la cuenta. Requiere que el usuario autenticado sea titular de la cuenta. Debe responder 200 con el listado, 403 si el usuario intenta consultar una cuenta ajena y 404 si la cuenta no existe.
+
+Realizar transferencia (POST /accounts/{accountId}/transferences): ejecuta una transferencia de dinero desde la cuenta de origen (especificada en la ruta) hacia otra cuenta identificada en el cuerpo de la solicitud. Debe validarse que la cuenta de origen corresponda al usuario autenticado, que la cuenta de destino exista y que el monto sea positivo. El endpoint responde 200 en caso de éxito (con información de la transferencia), 400 si la cuenta no existe o los datos son inválidos, 403 si el usuario no es titular de la cuenta de origen, y 410 si los fondos disponibles son insuficientes. Además, la aplicación debe actualizar el saldo de la cuenta de origen y registrar al nuevo destinatario en la lista de frecuentes.
+
+Las reglas de negocio de transferencias incluyen la conservación del orden de las transacciones, la actualización del saldo en tiempo real y la imposibilidad de transferir dinero desde una cuenta que no pertenece al usuario autenticado.
+
+4 Estrategia y niveles de pruebas
+4.1 Pruebas funcionales
+
+Se ejecutarán pruebas funcionales manuales contra los endpoints desplegados en el entorno de desarrollo o staging. Las pruebas se diseñarán utilizando la técnica de caja negra (black box), enfocándose en las entradas y salidas observables sin necesidad de conocer la implementación interna.
+
+4.2 Smoke test
+
+Para cada despliegue se ejecutará una selección de casos críticos que verifican que los servicios básicos están operativos. Un smoke test cubre escenarios felices como el registro exitoso de un usuario nuevo, el inicio de sesión con credenciales válidas y el cierre de sesión.
+
+4.3 Pruebas de regresión
+
+Antes de cada entrega, los casos de regresión se ejecutarán para confirmar que las funcionalidades existentes no se han visto afectadas por cambios recientes. Los casos de regresión incluyen validaciones negativas (campos requeridos, formatos erróneos, credenciales incorrectas), uso de tokens expirados o inválidos, y verificación de cabeceras.
+
+4.4 Pruebas exploratorias
+
+Además de las pruebas planificadas, se realizarán sesiones de prueba exploratoria para identificar comportamientos no previstos. Estas sesiones se documentarán mediante notas de exploración en las que se describen los tours realizados, hipótesis evaluadas y defectos encontrados.
+
+5 Diseño de casos de prueba
+
+Los casos de prueba se documentarán en una hoja de cálculo con la siguiente estructura:
+
+Campo	Descripción
+ID	Identificador único del caso (ej. TC-REG-001).
+Endpoint / Método	Ruta y verbo HTTP sobre el cual se ejecuta la prueba.
+Título	Breve descripción de la funcionalidad a validar.
+Precondiciones	Estado inicial necesario (por ejemplo, usuario existente, ausencia de cuenta previa).
+Datos de entrada	Valores específicos que se enviarán en la petición (payload o parámetros).
+Pasos	Instrucciones detalladas para ejecutar la prueba, incluyendo cómo construir la solicitud (cabeceras, método, cuerpo) y cómo verificar la respuesta.
+Resultado esperado	Resultado observable que se espera obtener: código de estado HTTP, contenido del cuerpo (campos devueltos, mensajes de error), creación o modificación de registros, efectos secundarios, etc.
+Resultado obtenido	Resultado real durante la ejecución. Debe consignarse “Pendiente” si la prueba aún no se ejecuta o “Pasó/Falló” con comentarios.
+Clasificación	Indica si el caso pertenece a la suite de smoke o a la de regresión. Algunos casos pueden pertenecer a ambas suites.
+Notas	Observaciones o información adicional, como defectos observados o referencias a tickets creados.
+5.1 Buenas prácticas en la redacción de casos
+
+Claridad y precisión: el título y los pasos deben describir exactamente lo que se va a probar. Evitar ambigüedades.
+
+Reproducibilidad: cualquier miembro del equipo debe poder ejecutar el caso y obtener el mismo resultado. Incluir datos de ejemplo y entorno de ejecución.
+
+Atomicidad: cada caso debe validar un comportamiento específico. Si se necesitan validar múltiples reglas, se crearán casos independientes.
+
+Rastreabilidad: vincular cada caso de prueba con el requisito o historia de usuario correspondiente para facilitar el seguimiento.
+
+6 Reporte y gestión de defectos
+
+Los defectos detectados durante la ejecución deberán registrarse en la herramienta de seguimiento de bugs adoptada por el equipo (por ejemplo, Jira, GitLab Issues o GitHub Issues). Cada reporte debe contener como mínimo:
+
+ID del defecto: se genera según el formato definido (ej. DEF-001).
+
+Título: resumen conciso del problema.
+
+Descripción: explicación detallada del comportamiento observado frente al esperado, incluyendo capturas de pantalla, cuerpo de la solicitud y respuesta, logs relevantes y condiciones en las que se presentó.
+
+Pasos para reproducir: enumeración detallada para replicar el error.
+
+Severidad: nivel de impacto en la funcionalidad (Crítica, Alta, Media, Baja). La severidad se asigna según el riesgo para la operación del usuario o la seguridad.
+
+Prioridad: indica el orden en que debería abordarse la corrección (Alta, Media, Baja), valorado en conjunto con el Product Owner.
+
+Entorno de ocurrencia: especifica el ambiente (dev, staging, producción), la fecha y la versión del backend.
+
+Todos los defectos deben adjuntarse al caso de prueba que los originó y actualizar el estado de dicho caso a “Falló”. Una vez corregido el error, se reabrirá la prueba como parte de la regresión.
+
+7 Criterios de inclusión en suites
+7.1 Smoke test
+
+Se seleccionarán los casos de prueba que cumplan las siguientes características:
+
+Prueban la operatividad básica de los servicios (up & running) y el camino feliz.
+
+Son de rápida ejecución y cobertura amplia. La suite no debe superar los 15 minutos de ejecución manual.
+
+No requieren datos complejos ni configuraciones particulares.
+
+Para los Sprints 1 y 2, forman parte del smoke test las pruebas que validan el camino feliz de las funcionalidades principales. Se incluyen:
+
+Creación de usuario con datos válidos.
+
+Inicio de sesión con credenciales correctas y recepción de token.
+
+Consulta de la cuenta (GET /accounts/{id}) y verificación de CVU, alias y saldo.
+
+Consulta de los últimos movimientos (GET /accounts/{id}/transactions).
+
+Consulta del perfil (GET /users/{id}).
+
+Creación de tarjeta con datos válidos (POST /accounts/{id}/cards).
+
+Eliminación de tarjeta existente (DELETE /accounts/{id}/cards/{cardId}).
+
+Cierre de sesión con token válido.
+
+Para el Sprint 4 se incorporan al smoke test los siguientes casos felices:
+
+Listar destinatarios de transferencias (GET /accounts/{id}/transferences): consultar la lista de destinatarios con un token válido y verificar que se devuelve un listado (posiblemente vacío) con código 200.
+
+Realizar transferencia exitosa (POST /accounts/{id}/transferences): ejecutar una transferencia entre cuentas del propio usuario con monto válido, confirmar código 200 y que el saldo se actualice correctamente.
+
+7.2 Regresión
+
+Incluye todos los casos que validan reglas de negocio, flujos alternativos y condiciones de error. Se ejecutan cada vez que se corrige un defecto o se despliega una nueva versión del backend. Para los Sprints 1 y 2, los casos de regresión abarcan, entre otros:
+
+Validación de campos obligatorios y formatos en el registro (email, DNI, contraseña) y duplicados de usuario.
+
+Manejo de credenciales incorrectas en el login y de bloqueos o límites de intentos.
+
+Solicitudes sin token, con token expirado o con rol inadecuado en cualquier endpoint protegido.
+
+Manejo de identificadores inexistentes en la consulta de cuenta, usuario o tarjetas (respuestas 404).
+
+Actualización de cuenta con alias en uso (409) o alias no válido.
+
+Actualización de usuario con email o DNI duplicados (409) y con datos faltantes.
+
+Creación de tarjeta con número duplicado o datos inválidos (409/400).
+
+Eliminación de tarjetas inexistentes (404) o idempotencia en llamadas repetidas.
+
+Para el Sprint 4 se añaden casos de regresión relacionados con transferencias:
+
+Validar que la respuesta sea 400 cuando la cuenta de origen no existe.
+
+Validar que la respuesta sea 403 cuando el usuario intenta listar o transferir desde una cuenta que no le pertenece.
+
+Validar que la respuesta sea 410 cuando el monto excede los fondos disponibles.
+
+Verificar que no se permitan montos negativos o nulos en el cuerpo de la transferencia.
+
+Comprobar que la lista de destinatarios frecuentes se actualiza tras cada transferencia exitosa.
+
+Pruebas de idempotencia y seguridad (cabeceras inapropiadas, verbos HTTP incorrectos) en todos los endpoints.
+
+8 Gestión y comunicación
+
+Los resultados de las pruebas se actualizarán en la hoja de cálculo compartida al finalizar cada sesión de prueba. Las notas de exploración se compartirán en el canal del equipo para discusión. Se realizará una daily breve para notificar bloqueos o defectos críticos.
+
+9 Riesgos y consideraciones
+
+La disponibilidad del entorno de backend es un factor crítico; se requiere estabilidad para ejecutar las pruebas manuales.
+
+Es importante trabajar con datos de prueba representativos, evitando usar datos reales de usuarios.
+
+Las validaciones de seguridad profunda (hashing de contraseñas, protección CSRF) se abordarán en fases posteriores con pruebas de penetración.
+
+Si se producen cambios en los contratos de las APIs, se deberá actualizar la documentación y los casos de prueba asociados.
+
+Este plan será revisado y refinado en colaboración con el equipo de desarrollo y el Product Owner al inicio de cada sprint. Su objetivo es proporcionar una guía estructurada y adaptable para asegurar la calidad del producto durante el desarrollo iterativo.
