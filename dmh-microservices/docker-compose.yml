@@ -1,0 +1,101 @@
+version: "3.9"
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: dmh-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: dmh
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  eureka-server:
+    build: ./eureka-server
+    container_name: dmh-eureka
+    ports:
+      - "8761:8761"
+    environment:
+      SERVER_PORT: 8761
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: dmh-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      SERVER_PORT: 8080
+      EUREKA_SERVER_URL: http://eureka-server:8761/eureka/
+      JWT_SECRET: UmFuZG9tU2VjcmV0S2V5Rm9yRE1ILUdhdGV3YXk= # reemplázalo por tu secreto Base64
+      CORS_ALLOWED_ORIGINS: "*"
+    depends_on:
+      - eureka-server
+
+  user-service:
+    build: ./user-service
+    container_name: dmh-user
+    ports:
+      - "8081:8081"
+    environment:
+      SERVER_PORT: 8081
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/dmh?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      JWT_SECRET: UmFuZG9tU2VjcmV0S2V5Rm9yRE1ILUdhdGV3YXk=
+      EUREKA_SERVER_URL: http://eureka-server:8761/eureka/
+    depends_on:
+      - mysql
+      - eureka-server
+
+  account-service:
+    build: ./account-service
+    container_name: dmh-account
+    ports:
+      - "8082:8082"
+    environment:
+      SERVER_PORT: 8082
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/dmh?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      JWT_SECRET: UmFuZG9tU2VjcmV0S2V5Rm9yRE1ILUdhdGV3YXk=
+      EUREKA_SERVER_URL: http://eureka-server:8761/eureka/
+    depends_on:
+      - mysql
+      - eureka-server
+
+  card-service:
+    build: ./card-service
+    container_name: dmh-card
+    ports:
+      - "8083:8083"
+    environment:
+      SERVER_PORT: 8083
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/dmh?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      JWT_SECRET: UmFuZG9tU2VjcmV0S2V5Rm9yRE1ILUdhdGV3YXk=
+      EUREKA_SERVER_URL: http://eureka-server:8761/eureka/
+    depends_on:
+      - mysql
+      - eureka-server
+
+  transaction-service:
+    build: ./transaction-service
+    container_name: dmh-transaction
+    ports:
+      - "8084:8084"
+    environment:
+      SERVER_PORT: 8084
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/dmh?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      JWT_SECRET: UmFuZG9tU2VjcmV0S2V5Rm9yRE1ILUdhdGV3YXk=
+      EUREKA_SERVER_URL: http://eureka-server:8761/eureka/
+    depends_on:
+      - mysql
+      - eureka-server
+
+volumes:
+  mysql_data:
